@@ -3,9 +3,31 @@
             [next.jdbc.sql      :as sql]
             [clojure.string     :as str]
             [clojure.java.io    :as io]
-            [clojure.edn        :as edn]))
+            [clojure.edn        :as edn]
+            [clj-test-containers.core :as tc]))
 
-(def jdbc-config "jdbc:h2:mem:privnet;DB_CLOSE_DELAY=-1")
+(def container (atom nil))
+(def jdbc-config-str (atom ""))
+
+(defn stop-container! []
+  (when-let [c @container]
+    (tc/stop! c)))
+
+(defn start-container! []
+  (stop-container!)
+  (reset! container (-> (tc/create {:image-name    "xtdb/core2:eb3325d8"
+                                    :exposed-ports [5432]
+                                    :env-vars      {}})
+                        #_(tc/bind-filesystem! {:host-path      "/tmp"
+                                                :container-path "/opt"
+                                                :mode           :read-only})
+                        (tc/start!)))
+;;  (Thread/sleep 8000)
+  (reset! jdbc-config-str (str "jdbc:postgresql://localhost:" (get (:mapped-ports @container) 5432) "/xtdb/")))
+
+(defn jdbc-config [] @jdbc-config-str)
+
+;(def jdbc-config "jdbc:h2:mem:privnet;DB_CLOSE_DELAY=-1")
 
 (defn create-table-ddl
   [table-id cols]
@@ -17,7 +39,7 @@
 
 (defn cleanup
   []
-  (run! #(jdbc/execute! jdbc-config [%])
+  (run! #(jdbc/execute! (jdbc-config) [%])
         ["DROP TABLE IF EXISTS account"
          "DROP TABLE IF EXISTS user"
          "DROP TABLE IF EXISTS invoice"
@@ -65,20 +87,22 @@
 
 (defn load-fixtures
   [dataset]
-  (cleanup)
+  #_(cleanup)
   (doseq [[k [h & r]] (-> (format "db/%s.edn" (name dataset))
                           (io/resource)
                           (slurp)
                           (edn/read-string))]
-    (sql/insert-multi! jdbc-config
+    (sql/insert-multi! (jdbc-config)
                        k
                        h
-                       r)))
+                       r
+                       {:return-keys false})))
 
 (defn with-db-fixtures
   [dataset]
   (fn [f]
-    (cleanup)
+#_    (cleanup)
+    (start-container!)
     (load-fixtures dataset)
     (f)
-    (cleanup)))
+#_    (cleanup)))

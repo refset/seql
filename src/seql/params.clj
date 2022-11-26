@@ -13,9 +13,11 @@
             (into [] cat (map extract-fields l)))
           (extract-fields [[k v]]
             (case k
-              :field    [(schema/resolve-field schema v)]
+              :field    [v]
               :relation (list-extract-fields (first (vals v)))))]
-    (list-extract-fields q)))
+    (let [l (list-extract-fields q)
+          lf (map #(schema/resolve-field schema %) l)]
+      [l lf])))
 
 (defn- ^:no-doc find-joins
   "Walks a field definition to find plain fields,
@@ -75,13 +77,14 @@
   [schema entity fields conditions]
   (let [fields          (if (seq fields) fields (schema/resolve-fields schema entity))
         cfields         (s/conform :seql.query/seql-query fields)
-        selections      (find-selections schema cfields)
+        [selection-columns selections] (find-selections schema cfields)
         ident-condition (resolve-ident-condition schema entity)
         joins           (find-joins cfields)]
     {:table      (schema/resolve-table schema entity)
      :fields     fields
      :ident?     (some? ident-condition)
      :selections selections
+     :selection-columns selection-columns
      :conditions (seq (cond-> (map (partial expand-condition schema) conditions)
                         (some? ident-condition)
                         (conj ident-condition)))

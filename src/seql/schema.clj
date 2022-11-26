@@ -125,12 +125,14 @@
 
 (defn unresolve-column
   "Figure out a field name based on a table and column name in SQL."
-  [schema table-name field]
-  (let [entity (unresolve-table schema table-name)]
-    (or (first (for [[k v] (resolve-by-entity schema (keyword entity) :overrides)
-                     :when (= (str/lower-case field) (str/lower-case (name v)))]
-                 k))
-        (keyword entity (->kebab-case-string field)))))
+  [schema params table-name field i]
+  (if-let [selection-columns (:selection-columns params)]
+    (get selection-columns i)
+    (let [entity (unresolve-table schema table-name)]
+      (or (first (for [[k v] (resolve-by-entity schema (keyword entity) :overrides)
+                       :when (= (str/lower-case field) (str/lower-case (name v)))]
+                   k))
+          (keyword entity (->kebab-case-string field))))))
 
 ;; I wonder if this belongs here, maybe in coerce?
 (defn as-column-name

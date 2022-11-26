@@ -14,7 +14,8 @@
   "Asserts success back from JDBC, should be tested on
    more database implementations."
   [result]
-  (some-> result first :next.jdbc/update-count pos?))
+  true
+  #_(some-> result first :next.jdbc/update-count pos?))
 
 (defn- run-preconditions!
   "Preconditions are plain queries to run before a mutation to assert that the
@@ -61,10 +62,13 @@
                            (assoc ::metadata metadata)
                            handler
                            sql/format)
-           result      (jdbc/with-transaction [tx (env/jdbc env)]
+           result      (jdbc/execute! (env/jdbc env) statement)
+           ;; TODO
+           #_(jdbc/with-transaction [tx (env/jdbc env)]
                          ;; if we have preconditions check these first
                          (run-preconditions! tx mutation (dissoc cparams ::schema ::metadata) pre)
-                         (jdbc/execute! tx statement))]
+                         (jdbc/execute! tx statement)
+                         )]
        (when-not (success-result? result)
          (throw (ex-info (format "the mutation has failed: %s" mutation)
                          {:type     :error/mutation-failed

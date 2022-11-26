@@ -18,4 +18,7 @@
   :dependencies [[org.clojure/clojure               "1.10.3"]
                  [com.github.seancorfield/next.jdbc "1.2.737"]
                  [com.github.seancorfield/honeysql  "2.1.818"]
-                 [exoscale/coax                     "1.0.0-alpha14"]])
+                 [exoscale/coax                     "1.0.0-alpha14"]
+                 [clj-test-containers "0.7.4"]
+                 [metosin/jsonista "0.3.6"]
+                 [org.postgresql/postgresql "42.2.20"]])

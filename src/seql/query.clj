@@ -31,7 +31,8 @@
   output of `seql.params/for-query`."
   [schema params]
   (->> (into-query schema params)
-       (sql/format)))
+       (sql/format)
+       #_(#(do (prn %) %))))
 
 (defn educt
   "Run a SEQL query and return an eduction of the records. No tree recomposition
@@ -42,7 +43,7 @@
    (let [params (params/for-query (env/schema env) entity fields conditions)]
      (educt env params)))
   ([{:keys [schema jdbc]} params]
-   (let [opts {:builder-fn (result-set/builder-fn schema)}
+   (let [opts {:builder-fn (result-set/builder-fn schema params)}
          q    (sql-query schema params)]
      (eduction (map c/read-map) (jdbc/execute! jdbc q opts)))))
 
